@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@theme {
+  --color-tasks-success: #4ade80;
+  --color-tasks-calm: #94a3b8;
+  --color-tasks-accent: #60a5fa;
+  --color-tasks-warning: #fbbf24;
+  --color-tasks-bg: #f8fafc;
+  --color-tasks-border: #e2e8f0;
+}
