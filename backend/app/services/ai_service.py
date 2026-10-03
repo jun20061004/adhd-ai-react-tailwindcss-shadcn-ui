@@ -19,9 +19,7 @@ Output format:
 [
   {"description": "Open the document and read the first paragraph", "estimated_minutes": 3},
   {"description": "Write a bullet point summary of each section", "estimated_minutes": 10}
-]
-
-Task to decompose:"""
+]"""
 
 
 async def decompose_task(title: str) -> list[StepResponse]:
@@ -35,7 +33,8 @@ async def decompose_task(title: str) -> list[StepResponse]:
         model=model,
         messages=[
             {"role": "system", "content": DECOMPOSE_SYSTEM_PROMPT},
-            {"role": "user", "content": title},
+            # 将引导语移至user角色的content中，拼接用户的实际输入
+            {"role": "user", "content": f"Task to decompose: {title}"},
         ],
         temperature=0.7,
         max_tokens=1024,

@@ -9,7 +9,8 @@ class CreateTaskRequest(BaseModel):
 class StepResponse(BaseModel):
     id: str
     description: str
-    estimated_minutes: int
+    # 引入Field并添加ge(大于等于)与le(小于等于)限制
+    estimated_minutes: int = Field(default=5,ge=1, le=15, description="微步耗时，必须在1-15分钟内")
     completed: bool = False
 
 

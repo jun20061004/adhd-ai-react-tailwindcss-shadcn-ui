@@ -1,0 +1,4 @@
+# 忽略所有环境变量与密钥文件
+.env
+.env.*
+backend/.env

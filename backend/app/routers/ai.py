@@ -1,21 +1,16 @@
 # from fastapi import APIRouter, Depends, HTTPException, Session
 # from sqlmodel import Session as SQLSession
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException,Body
 from app.schemas.task import StepResponse
 from app.services import ai_service
-
-router = APIRouter(prefix="/ai", tags=["ai"])
-
 from app.core.database import get_session
-from app.schemas.task import StepResponse
-from app.services import ai_service
 
-router = APIRouter(prefix="/ai", tags=["ai"])
-
+router = APIRouter(prefix="/api/v1/ai", tags=["ai"])
 
 @router.post("/decompose", response_model=list[StepResponse])
 async def decompose(
-    title: str,
+# 使用Body(..., embed=True)强制FastAPI去解析HTTP请求体中的JSON，而不是从URL查询参数中找title
+    title: str = Body(...,embed=True),
 ) -> list[StepResponse]:
     try:
         return await ai_service.decompose_task(title)
