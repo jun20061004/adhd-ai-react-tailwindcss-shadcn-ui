@@ -9,14 +9,12 @@ type TaskInputProps = {
 export function TaskInput({ onSubmit, submitting }: TaskInputProps) {
   const [value, setValue] = useState("");
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const title = value.trim();
-    if (!title) {
-      return;
-    }
+    if (!title) return;
 
-    await onSubmit(title);
+    await onSubmit(title); // 提交后清空输入，保留在父层状态
     setValue("");
   };
 

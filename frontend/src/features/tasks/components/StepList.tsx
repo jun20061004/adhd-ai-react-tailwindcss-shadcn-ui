@@ -19,9 +19,10 @@ export function StepList({ steps, taskId, onStepToggle }: StepListProps) {
             step.completed && "bg-slate-100",
           )}
         >
+          {/* step.id 来源自后端落库后的主键，与 TaskStep.id 保持一致 */}
           <button
-            onClick={() => onStepToggle(taskId, step.id)}
-            className="mt-0.5 flex-shrink-0"
+              onClick={() => onStepToggle(taskId, step.id)}
+              className="mt-0.5 flex-shrink-0"
           >
             {step.completed ? (
               <CheckCircle2 className="h-4 w-4 text-tasks-success" />

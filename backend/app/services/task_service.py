@@ -25,11 +25,24 @@ def create_task_with_steps(
 
     session.commit()
 
+    # 重新从数据库读取微步，确保响应中的 step.id 是真实落库后的主键，
+    # 与前端后续调用 toggle_step 所需的 step_id 保持一致
+    step_stmt = select(TaskStep).where(TaskStep.task_id == task.id)
+    persisted_steps = session.exec(step_stmt).all()
+
     return TaskResponse(
         id=task.id,
         title=task.title,
         status=task.status,
-        steps=steps,
+        steps=[
+            StepResponse(
+                id=s.id,
+                description=s.description,
+                estimated_minutes=s.estimated_minutes,
+                completed=s.completed,
+            )
+            for s in persisted_steps
+        ],
         created_at=task.created_at,
         updated_at=task.updated_at,
     )

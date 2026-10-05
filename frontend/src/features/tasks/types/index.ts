@@ -14,11 +14,11 @@ export interface Task {
   updated_at: string;
 }
 
-export interface CreateTaskRequest {
-  title: string;
-}
+// export interface CreateTaskRequest {
+//   title: string;
+// }
 
-export interface CreateTaskResponse {
-  task: Task;
-  steps_generated: number;
-}
+// export interface CreateTaskResponse {
+//   task: Task;
+//   steps_generated: number;
+// }
