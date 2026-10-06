@@ -14,7 +14,7 @@ from app.schemas.task import (
 )
 from app.services import ai_service, task_service
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
 
 
 @router.post("", response_model=TaskResponse)

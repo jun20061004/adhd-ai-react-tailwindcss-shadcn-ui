@@ -21,10 +21,8 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        // rewrite参数作用：请求拦截转换器。
-        // 全局作用：在请求真实到达后端前，利用正则表达式将路径中的/api/v1替换为空字符串。后端实际收到的请求路径将变为/tasks。
-        rewrite: (path) => path.replace(/^\/api\/v1/, '')
+        changeOrigin: true
+        // 已经删除了rewrite规则，让/api/v1原封不动地转发给FastAPI后端
       }
     }
   },

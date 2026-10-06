@@ -23,7 +23,7 @@ export function useTasks(): UseTasksReturn {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiFetch<any>("/api/v1/tasks"); // 确保加上了正确的路由前缀
+      const response = await apiFetch<any>("/tasks");
 
       // 兼容后端 TaskListResponse 的 tasks 字段，以及 apiFetch 可能包裹的 data 字段
       const taskList = response.tasks || response.data?.tasks || response.data || response;
@@ -42,10 +42,10 @@ export function useTasks(): UseTasksReturn {
     setSubmitting(true);
     setError(null);
     try {
-      const response = await apiFetch<any>("/api/v1/ai/decompose", {
-        method: "POST",
-        body: JSON.stringify({ title }),
-      });
+      const response = await apiFetch<any>("/ai/decompose", {
+      method: "POST",
+      body: JSON.stringify({ title }),
+        });
       const newTask = response.data || response;
       setTasks((prev) => [newTask, ...prev]);
     } catch {
