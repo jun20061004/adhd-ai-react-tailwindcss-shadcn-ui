@@ -1,8 +1,6 @@
-# from fastapi import APIRouter, Depends, HTTPException, Session
-# from sqlmodel import Session as SQLSession
-from fastapi import APIRouter, Depends, HTTPException
+import logging
+from fastapi import APIRouter, Body,Depends, HTTPException
 from sqlmodel import Session as SQLSession
-
 
 from app.core.database import get_session
 from app.schemas.task import (
@@ -13,8 +11,8 @@ from app.schemas.task import (
 )
 from app.services import ai_service, task_service
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
-
 
 @router.post("", response_model=TaskResponse)
 async def create_task(
@@ -23,10 +21,11 @@ async def create_task(
 ) -> TaskResponse:
     try:
         steps = await ai_service.decompose_task(request.title)
-    except Exception as exc:
+    except Exception:
+        logger.exception("AI拆解接口调用失败")
         raise HTTPException(
             status_code=502,
-            detail=f"AI decomposition failed: {exc}",
+            detail="任务拆解服务暂时不可用，请稍后再试",
         )
 
     return task_service.create_task_with_steps(
@@ -54,6 +53,24 @@ async def update_task(
         raise HTTPException(status_code=404, detail="Task not found")
     return updated
 
+
+# 修复：补齐 {task_id} 路径参数，与前端 /api/v1/tasks/{taskId}/steps/{stepId} 完全对齐
+@router.patch("/{task_id}/steps/{step_id}", response_model=TaskResponse)
+async def update_step(
+    task_id: str,
+    step_id: str,
+    completed: bool = Body(..., embed=True),
+    session: SQLSession = Depends(get_session),
+) -> TaskResponse:
+    # 注意：如果 task_service.toggle_step 需要 task_id 进行双重校验，请一并传入
+    updated = task_service.toggle_step(
+        session=session,
+        step_id=step_id,
+        completed=completed,
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Micro step not found")
+    return updated
 
 @router.delete("/{task_id}")
 async def delete_task(

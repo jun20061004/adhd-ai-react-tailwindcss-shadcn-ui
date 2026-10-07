@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import uuid
 
 from openai import AsyncOpenAI
@@ -9,22 +10,23 @@ from app.schemas.task import StepResponse
 
 logger = logging.getLogger(__name__)
 
-DECOMPOSE_SYSTEM_PROMPT = """You are an ADHD-friendly task decomposition assistant.
+DECOMPOSE_SYSTEM_PROMPT = """你是一个专为ADHD人群设计的任务拆解助手。
 
-Given a single task description, break it down into 3-8 micro-steps that each take 1-15 minutes.
+给定一个任务描述，请将其拆分为 3 到 8 个微小、具体、可立即执行的步骤。每个步骤耗时 1 到 15 分钟。
 
-Rules:
-- Each step MUST start with an action verb
-- Each step MUST be concrete and immediately actionable
-- Steps MUST be ordered from easiest to hardest
-- Each step MUST have an estimated duration in minutes (1-15)
-- Return ONLY valid JSON array, no markdown formatting
+规则：
+- 每个步骤必须以动词开头，具体且可执行。
+- 步骤必须按从易到难、符合逻辑的时间顺序排列。
+- 每个步骤必须预估耗时（1-15分钟）。
+- 最终的拆解结果必须是一个包含 json 对象的数组。
 
-Output format:
+输出格式示例：
+```json
 [
-  {"description": "Open the document and read the first paragraph", "estimated_minutes": 3},
-  {"description": "Write a bullet point summary of each section", "estimated_minutes": 10}
-]"""
+  {"description": "换上适合跳舞的运动服和鞋子", "estimated_minutes": 5},
+  {"description": "打开音响或手机播放热身音乐", "estimated_minutes": 2}
+]
+```"""
 
 # 模块级单例：进程内仅构造一次 AsyncOpenAI，使其内部持有的 httpx 连接池被所有请求复用，
 # 避免每次拆解都重建 TCP 连接与 TLS 握手，从而降低高延迟接口的首包时间。
@@ -47,15 +49,38 @@ async def decompose_task(title: str) -> list[StepResponse]:
         model=model,
         messages=[
             {"role": "system", "content": DECOMPOSE_SYSTEM_PROMPT},
-            # 将引导语移至user角色的content中，拼接用户的实际输入
-            {"role": "user", "content": f"Task to decompose: {title}"},
+            {"role": "user",
+             "content": f"请仔细拆解这个任务：【{title}】\n你可以先进行思考，但最终请务必给出包含步骤的 JSON 数组结果。"}
         ],
-        temperature=0.7,
-        max_tokens=1024,
+        temperature=0.6,  # R1 模型推荐 0.6 左右的温度，让它有空间发散思考
+        max_tokens=2048,  # 给足 Token，避免它还没思考完就被强行掐断
     )
 
     raw_content = response.choices[0].message.content or "[]"
-    steps_data = json.loads(raw_content)
+    print("\n" + "=" * 50)
+    print(f"【AI原始输出】:\n{raw_content}")
+    print("=" * 50 + "\n")
+
+
+    # 尝试使用正则提取真正的JSON数组部分，剔除可能存在的Markdown标记或聊天废话
+    match = re.search(r"\[.*\]", raw_content, re.DOTALL)
+    if match:
+        clean_content = match.group(0)
+    else:
+        clean_content = raw_content
+
+    try:
+        steps_data = json.loads(clean_content)
+    except json.JSONDecodeError:
+        # 即使清洗后依然解析失败，赋予空列表使后续能够抛出一致的业务级错误，而不是500内部服务器崩溃
+        steps_data = []
+
+    # 兼容部分模型可能会自作主张返回带有根节点字典的JSON(如 {"steps": [...]})
+    if isinstance(steps_data, dict):
+        for key in steps_data.keys():
+            if isinstance(steps_data[key], list):
+                steps_data = steps_data[key]
+                break
 
     if not isinstance(steps_data, list) or not steps_data:
         # 模型未能给出可用拆解，属于上游契约违约，交由路由层转换为对用户友好的提示

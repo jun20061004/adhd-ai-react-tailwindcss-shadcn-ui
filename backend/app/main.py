@@ -5,7 +5,6 @@ from app.core.config import settings
 from app.core.database import init_db
 from app.routers import ai, health, tasks
 
-from app.core.database import init_db
 
 app = FastAPI(
     title="ADHD AI Task Manager API",
@@ -35,12 +34,6 @@ app.include_router(ai.router)
 def on_startup() -> None:
     init_db()
 
-
-
-@app.on_event("startup")
-def on_startup():
-    #恢复为完全同步的调用
-    init_db()
 
 
 @app.get("/")

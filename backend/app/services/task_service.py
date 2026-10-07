@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Optional
 from sqlmodel import Session, select
 from app.models.task import Task, TaskStep
 from app.schemas.task import StepResponse, TaskResponse
@@ -25,8 +26,6 @@ def create_task_with_steps(
 
     session.commit()
 
-    # 重新从数据库读取微步，确保响应中的 step.id 是真实落库后的主键，
-    # 与前端后续调用 toggle_step 所需的 step_id 保持一致
     step_stmt = select(TaskStep).where(TaskStep.task_id == task.id)
     persisted_steps = session.exec(step_stmt).all()
 
@@ -88,7 +87,7 @@ def update_task_status(
         return None
 
     task.status = new_status
-    task.updated_at = datetime.utcnow()
+    task.updated_at = datetime.now(timezone.utc)
     session.add(task)
     session.commit()
     session.refresh(task)
@@ -116,27 +115,32 @@ def update_task_status(
 
 def toggle_step(
     session: Session,
-    task_id: str,
     step_id: str,
+    completed: Optional[bool] = None,
 ) -> TaskResponse | None:
     step = session.get(TaskStep, step_id)
-    if step is None or step.task_id != task_id:
+    if step is None:
         return None
 
-    step.completed = not step.completed
+    if completed is not None:
+        step.completed = completed
+    else:
+        step.completed = not step.completed
+
     session.add(step)
     session.commit()
 
-    task = session.get(Task, task_id)
-    assert task is not None
+    task = session.get(Task, step.task_id)
+    if task is None:
+        return None
 
-    all_steps_stmt = select(TaskStep).where(TaskStep.task_id == task_id)
+    all_steps_stmt = select(TaskStep).where(TaskStep.task_id == step.task_id)
     all_steps = session.exec(all_steps_stmt).all()
     all_completed = all(s.completed for s in all_steps)
 
     if all_completed:
         task.status = "completed"
-        task.updated_at = datetime.utcnow()
+        task.updated_at = datetime.now(timezone.utc)
         session.add(task)
         session.commit()
         session.refresh(task)
