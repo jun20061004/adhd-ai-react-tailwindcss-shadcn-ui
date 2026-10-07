@@ -71,34 +71,44 @@ export function useTasks(): UseTasksReturn {
     async (taskId: string, stepId: string) => {
       setStepError(null);
 
-      // 读取当前该微步的完成态，用于乐观更新与失败回滚
-      const currentTask = tasks.find((t) => t.id === taskId);
-      const currentStep = currentTask?.steps.find((s) => s.id === stepId);
-      const currentCompleted = currentStep?.completed ?? false;
+      let targetCompleted = false;
+      let originalCompleted = false;
 
-      // 乐观更新：先改本地状态，进度条立即变化，降低感知延迟
-      const optimisticallyUpdated: Task = {
-        ...currentTask,
-        steps: currentTask.steps.map((step) =>
-          step.id === stepId ? { ...step, completed: !currentCompleted } : step
-        ),
-      };
-      setTasks((prev) => prev.map((task) => (task.id === taskId ? optimisticallyUpdated : task)));
+      // 在函数式更新内部查找当前状态，确保拿到最新队列快照，不依赖外部闭包变量
+      setTasks((prev) => {
+        const currentTask = prev.find((t) => t.id === taskId);
+        const currentStep = currentTask?.steps.find((s) => s.id === stepId);
+
+        originalCompleted = currentStep?.completed ?? false;
+        targetCompleted = !originalCompleted;
+
+        // 乐观更新：立即反转微步状态，进度条即时响应
+        return prev.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                steps: task.steps.map((step) =>
+                  step.id === stepId ? { ...step, completed: targetCompleted } : step
+                ),
+              }
+            : task
+        );
+      });
 
       try {
         await apiFetch(`/tasks/${taskId}/steps/${stepId}`, {
           method: "PATCH",
-          body: JSON.stringify({ completed: !currentCompleted }),
+          body: JSON.stringify({ completed: targetCompleted }),
         });
       } catch {
-        // 失败回滚：恢复原完成态，并记录局部错误供TaskCard渲染重试提示
+        // 失败时回滚到操作前的状态
         setTasks((prev) =>
           prev.map((task) =>
             task.id === taskId
               ? {
                   ...task,
                   steps: task.steps.map((step) =>
-                    step.id === stepId ? { ...step, completed: currentCompleted } : step
+                    step.id === stepId ? { ...step, completed: originalCompleted } : step
                   ),
                 }
               : task
@@ -107,7 +117,7 @@ export function useTasks(): UseTasksReturn {
         setStepError({ taskId, stepId, message: "更新失败" });
       }
     },
-    [tasks]
+    [] // 无依赖：函数式更新内部自己处理最新状态，无需将 tasks 纳入依赖数组
   );
 
   // 标记任务为完成
