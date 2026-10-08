@@ -14,6 +14,7 @@ export function App() {
     createTask,
     toggleStep,
     completeTask,
+    deleteTask,
   } = useTasks();
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export function App() {
               onStepToggle={toggleStep}
               onTaskComplete={completeTask}
               onRefresh={fetchTasks}
+              onDelete={deleteTask}
               stepError={stepError}
               submitting={submitting}
             />

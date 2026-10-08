@@ -19,6 +19,7 @@ interface UseTasksReturn {
   createTask: (title: string) => Promise<void>;
   toggleStep: (taskId: string, stepId: string) => Promise<void>;
   completeTask: (taskId: string) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
 }
 
 export function useTasks(): UseTasksReturn {
@@ -135,6 +136,19 @@ export function useTasks(): UseTasksReturn {
     }
   }, []);
 
+  // 删除任务：调用后端 DELETE 接口，成功后从本地状态中移除
+  const deleteTask = useCallback(async (taskId: string) => {
+    try {
+      await apiFetch(`/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+      // 成功后立即从本地状态中移除，无需重新拉取全量列表
+      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    } catch {
+      setError("任务删除失败");
+    }
+  }, []);
+
   return {
     tasks,
     loading,
@@ -145,5 +159,6 @@ export function useTasks(): UseTasksReturn {
     createTask,
     toggleStep,
     completeTask,
+    deleteTask,
   };
 }

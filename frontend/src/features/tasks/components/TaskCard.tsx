@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Clock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/features/tasks/types";
 import type { StepError } from "@/features/tasks/hooks/useTasks";
@@ -10,6 +10,7 @@ type TaskCardProps = {
   onStepToggle: (taskId: string, stepId: string) => void;
   onTaskComplete: (taskId: string) => void;
   onRefresh: () => void;
+  onDelete?: (taskId: string) => void;
   completed?: boolean;
   // 控制展开后微步区域是否显示骨架屏占位
   loadingSteps?: boolean;
@@ -21,6 +22,7 @@ export function TaskCard({
   onStepToggle,
   onTaskComplete,
   onRefresh,
+  onDelete,
   completed,
   loadingSteps,
   stepError,
@@ -30,11 +32,10 @@ export function TaskCard({
   const totalSteps = task.steps.length;
   const completedSteps = task.steps.filter((step) => step.completed).length;
 
-  // 仅当错误属于本卡片时显示对应微步下方的重试提示
+  // 仅当错误属于本任务时渲染重试提示
   const localStepError =
     stepError && stepError.taskId === task.id ? stepError : null;
 
-  // 骨架屏占位条：数量与真实微步数保持一致，降低布局跳动
   const renderSkeleton = () => (
     <div className="space-y-2" aria-busy="true" aria-label="Loading steps">
       {Array.from({ length: totalSteps }).map((_, index) => (
@@ -42,7 +43,7 @@ export function TaskCard({
           key={index}
           className="flex items-center gap-3 rounded-lg p-2"
         >
-          <div className="h-4 w-4 animate-pulse rounded-full bg-slate-200" />
+          <div className="h-4 w-4 flex-shrink-0 animate-pulse rounded-full border border-slate-200 bg-slate-100" />
           <div className="flex-1 space-y-1.5">
             <div className="h-3 w-3/4 animate-pulse rounded bg-slate-200" />
             <div className="h-2 w-16 animate-pulse rounded bg-slate-100" />
@@ -92,12 +93,24 @@ export function TaskCard({
         </div>
 
         {!completed && (
-          <button
-            onClick={() => onTaskComplete(task.id)}
-            className="flex-shrink-0 rounded-lg bg-tasks-success px-3 py-1 text-xs font-medium text-white hover:brightness-110"
-          >
-            Done
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* 删除按钮：仅非完成态任务显示，使用低对比度浅灰色，hover 时略微加深 */}
+            {onDelete && (
+              <button
+                onClick={() => onDelete(task.id)}
+                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                title="Delete task"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              onClick={() => onTaskComplete(task.id)}
+              className="flex-shrink-0 rounded-lg bg-tasks-success px-3 py-1 text-xs font-medium text-white hover:brightness-110"
+            >
+              Done
+            </button>
+          </div>
         )}
       </div>
 

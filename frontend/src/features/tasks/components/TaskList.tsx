@@ -7,6 +7,7 @@ type TaskListProps = {
   onStepToggle: (taskId: string, stepId: string) => void;
   onTaskComplete: (taskId: string) => void;
   onRefresh: () => void;
+  onDelete?: (taskId: string) => void;
   stepError?: StepError | null;
   submitting?: boolean;
 };
@@ -16,6 +17,7 @@ export function TaskList({
   onStepToggle,
   onTaskComplete,
   onRefresh,
+  onDelete,
   stepError,
   submitting,
 }: TaskListProps) {
@@ -50,14 +52,17 @@ export function TaskList({
       {submitting && renderSubmittingSkeleton()}
 
       {activeTasks.map((task) => (
-        <TaskCard
-          key={task.id}
-          task={task}
-          onStepToggle={onStepToggle}
-          onTaskComplete={onTaskComplete}
-          onRefresh={onRefresh}
-          stepError={stepError}
-        />
+        <div key={task.id} className="group">
+          {/* group class 用于实现删除按钮的 hover 显示效果 */}
+          <TaskCard
+            task={task}
+            onStepToggle={onStepToggle}
+            onTaskComplete={onTaskComplete}
+            onRefresh={onRefresh}
+            onDelete={onDelete}
+            stepError={stepError}
+          />
+        </div>
       ))}
 
       {completedTasks.length > 0 && (
